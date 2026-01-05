@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { 
@@ -8,23 +8,31 @@ import {
   X, 
   CheckCircle,
   Loader2,
-  Sparkles
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useChartAnalysis, AnalysisResult } from "@/hooks/useChartAnalysis";
 
 interface UploadedFile {
   id: string;
   name: string;
   size: string;
   type: "image" | "pdf";
-  status: "pending" | "uploading" | "complete";
+  status: "pending" | "uploading" | "complete" | "analyzing" | "analyzed";
   progress: number;
+  file: File;
 }
 
 const Upload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const { toast } = useToast();
+  const { isAnalyzing, results, error, analyzeFiles } = useChartAnalysis();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -50,44 +58,17 @@ const Upload = () => {
       name: file.name,
       size: formatFileSize(file.size),
       type: file.type.includes("pdf") ? "pdf" : "image",
-      status: "pending",
-      progress: 0,
+      status: "complete",
+      progress: 100,
+      file,
     }));
 
     setFiles((prev) => [...prev, ...newFiles]);
 
-    // Simulate upload progress
-    newFiles.forEach((file) => {
-      simulateUpload(file.id);
-    });
-
     toast({
       title: "Files Added",
-      description: `${newFiles.length} file(s) added for processing`,
+      description: `${newFiles.length} file(s) ready for analysis`,
     });
-  };
-
-  const simulateUpload = (fileId: string) => {
-    setFiles((prev) =>
-      prev.map((f) => (f.id === fileId ? { ...f, status: "uploading" } : f))
-    );
-
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 20;
-      if (progress >= 100) {
-        clearInterval(interval);
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === fileId ? { ...f, status: "complete", progress: 100 } : f
-          )
-        );
-      } else {
-        setFiles((prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, progress } : f))
-        );
-      }
-    }, 300);
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -104,11 +85,63 @@ const Upload = () => {
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const analyzeFiles = () => {
+  const handleAnalyze = async () => {
+    const imageFiles = files.filter((f) => f.type === "image").map((f) => f.file);
+    
+    if (imageFiles.length === 0) {
+      toast({
+        title: "No Images",
+        description: "Please upload image files to analyze.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFiles((prev) => prev.map((f) => ({ ...f, status: "analyzing" })));
+
     toast({
       title: "Analysis Started",
-      description: "Your files are being processed. Insights will appear in your dashboard.",
+      description: `Analyzing ${imageFiles.length} chart(s) with AI...`,
     });
+
+    const analysisResults = await analyzeFiles(imageFiles);
+
+    setFiles((prev) => prev.map((f) => ({ ...f, status: "analyzed" })));
+
+    if (analysisResults.length > 0) {
+      toast({
+        title: "Analysis Complete",
+        description: `Generated insights for ${analysisResults.length} chart(s)`,
+      });
+    } else if (error) {
+      toast({
+        title: "Analysis Failed",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getSignalIcon = (signal: string) => {
+    switch (signal) {
+      case "bullish":
+        return <TrendingUp className="h-5 w-5 text-success" />;
+      case "bearish":
+        return <TrendingDown className="h-5 w-5 text-destructive" />;
+      default:
+        return <Minus className="h-5 w-5 text-warning" />;
+    }
+  };
+
+  const getSignalColor = (signal: string) => {
+    switch (signal) {
+      case "bullish":
+        return "text-success bg-success/10 border-success/20";
+      case "bearish":
+        return "text-destructive bg-destructive/10 border-destructive/20";
+      default:
+        return "text-warning bg-warning/10 border-warning/20";
+    }
   };
 
   return (
@@ -136,6 +169,7 @@ const Upload = () => {
           }`}
         >
           <input
+            ref={fileInputRef}
             type="file"
             id="file-upload"
             multiple
@@ -201,23 +235,22 @@ const Upload = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {file.status === "uploading" && (
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-300"
-                            style={{ width: `${file.progress}%` }}
-                          />
-                        </div>
-                        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                    {file.status === "analyzing" && (
+                      <div className="flex items-center gap-2 text-primary">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-xs">Analyzing...</span>
                       </div>
                     )}
                     {file.status === "complete" && (
                       <CheckCircle className="h-5 w-5 text-success" />
                     )}
+                    {file.status === "analyzed" && (
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    )}
                     <button
                       onClick={() => removeFile(file.id)}
                       className="p-1 hover:bg-secondary rounded-lg transition-colors"
+                      disabled={isAnalyzing}
                     >
                       <X className="h-4 w-4 text-muted-foreground" />
                     </button>
@@ -230,12 +263,90 @@ const Upload = () => {
               variant="hero"
               size="lg"
               className="w-full group"
-              onClick={analyzeFiles}
-              disabled={files.some((f) => f.status === "uploading")}
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || files.length === 0}
             >
-              <Sparkles className="h-5 w-5" />
-              Analyze with Visual AI
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Analyzing Charts...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5" />
+                  Analyze with Visual AI
+                </>
+              )}
             </Button>
+          </div>
+        )}
+
+        {/* Analysis Results */}
+        {results.length > 0 && (
+          <div className="max-w-4xl mx-auto mt-12">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Analysis Results
+            </h2>
+            
+            <div className="space-y-6">
+              {results.map((result, index) => (
+                <div key={index} className="glass-card p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{result.fileName}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {result.analysis.asset} • {result.analysis.timeframe}
+                      </p>
+                    </div>
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${getSignalColor(result.analysis.signal)}`}>
+                      {getSignalIcon(result.analysis.signal)}
+                      <span className="text-sm font-medium capitalize">{result.analysis.signal}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="text-center p-3 rounded-lg bg-secondary/50">
+                      <p className="text-xs text-muted-foreground mb-1">Confidence</p>
+                      <p className="text-lg font-bold text-primary">{result.analysis.confidence}%</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-secondary/50">
+                      <p className="text-xs text-muted-foreground mb-1">Risk Level</p>
+                      <p className="text-lg font-bold capitalize">{result.analysis.riskLevel}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-secondary/50">
+                      <p className="text-xs text-muted-foreground mb-1">Trend</p>
+                      <p className="text-lg font-bold capitalize">{result.analysis.trendDirection}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-secondary/50">
+                      <p className="text-xs text-muted-foreground mb-1">Strength</p>
+                      <p className="text-lg font-bold capitalize">{result.analysis.trendStrength}</p>
+                    </div>
+                  </div>
+
+                  {result.analysis.patterns.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm text-muted-foreground mb-2">Detected Patterns</p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.analysis.patterns.map((pattern, i) => (
+                          <span key={i} className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary border border-primary/20">
+                            {pattern}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t border-border pt-4">
+                    <p className="text-sm mb-2">{result.analysis.summary}</p>
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <AlertTriangle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-primary">{result.analysis.recommendation}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
