@@ -56,6 +56,19 @@ const Dashboard = () => {
           ))}
         </div>
 
+        {/* Real-time chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Real-Time Market Chart</h2>
+          </div>
+          <LiveStockChart />
+        </motion.div>
+
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
