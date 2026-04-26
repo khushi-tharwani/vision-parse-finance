@@ -3,6 +3,7 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import InsightCard from "@/components/dashboard/InsightCard";
 import RecentUploads from "@/components/dashboard/RecentUploads";
 import LiveStocks from "@/components/dashboard/LiveStocks";
+import LiveStockChart from "@/components/dashboard/LiveStockChart";
 import { Button } from "@/components/ui/button";
 import { Activity, TrendingUp, FileImage, AlertTriangle, Upload, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -54,6 +55,19 @@ const Dashboard = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* Real-time chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Real-Time Market Chart</h2>
+          </div>
+          <LiveStockChart />
+        </motion.div>
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
