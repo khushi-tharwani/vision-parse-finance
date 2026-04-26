@@ -5,7 +5,7 @@ import RecentUploads from "@/components/dashboard/RecentUploads";
 import LiveStocks from "@/components/dashboard/LiveStocks";
 import LiveStockChart from "@/components/dashboard/LiveStockChart";
 import { Button } from "@/components/ui/button";
-import { Activity, TrendingUp, FileImage, AlertTriangle, Upload, RefreshCw } from "lucide-react";
+import { Activity, TrendingUp, FileImage, AlertTriangle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -32,7 +32,6 @@ const Dashboard = () => {
             <p className="text-muted-foreground">Overview of your visual financial intelligence</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="glass" size="sm" className="gap-2"><RefreshCw className="h-4 w-4" /> Refresh</Button>
             <Link to="/upload"><Button variant="hero" size="sm" className="gap-2"><Upload className="h-4 w-4" /> New Upload</Button></Link>
           </div>
         </motion.div>
