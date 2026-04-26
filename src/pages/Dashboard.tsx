@@ -2,6 +2,7 @@ import Navbar from "@/components/layout/Navbar";
 import StatsCard from "@/components/dashboard/StatsCard";
 import InsightCard from "@/components/dashboard/InsightCard";
 import RecentUploads from "@/components/dashboard/RecentUploads";
+import LiveStocks from "@/components/dashboard/LiveStocks";
 import { Button } from "@/components/ui/button";
 import { Activity, TrendingUp, FileImage, AlertTriangle, Upload, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -79,12 +80,21 @@ const Dashboard = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
+            className="space-y-6"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Recent Uploads</h2>
-              <Link to="/upload"><Button variant="ghost" size="sm">Upload</Button></Link>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Real-Time Stocks</h2>
+              </div>
+              <LiveStocks />
             </div>
-            <RecentUploads />
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Recent Uploads</h2>
+                <Link to="/upload"><Button variant="ghost" size="sm">Upload</Button></Link>
+              </div>
+              <RecentUploads />
+            </div>
           </motion.div>
         </div>
       </main>
