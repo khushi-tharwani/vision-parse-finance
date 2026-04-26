@@ -106,9 +106,6 @@ const Navbar = () => {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link to="/auth">
-              <Button variant="hero" size="sm">Sign In</Button>
-            </Link>
           </div>
 
           <Button
@@ -135,9 +132,6 @@ const Navbar = () => {
                   </Button>
                 </Link>
               ))}
-              <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="hero" className="w-full mt-2">Sign In</Button>
-              </Link>
             </div>
           </div>
         )}
