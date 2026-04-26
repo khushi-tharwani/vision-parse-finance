@@ -3,6 +3,7 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import InsightCard from "@/components/dashboard/InsightCard";
 import RecentUploads from "@/components/dashboard/RecentUploads";
 import LiveStocks from "@/components/dashboard/LiveStocks";
+import LiveStockChart from "@/components/dashboard/LiveStockChart";
 import { Button } from "@/components/ui/button";
 import { Activity, TrendingUp, FileImage, AlertTriangle, Upload, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
