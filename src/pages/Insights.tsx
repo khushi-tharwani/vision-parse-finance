@@ -47,7 +47,16 @@ const Insights = () => {
             <h1 className="text-2xl md:text-3xl font-bold mb-1">Market Insights</h1>
             <p className="text-muted-foreground">AI-generated insights from your visual financial data</p>
           </div>
-          <Button variant="glass" className="gap-2"><Download className="h-4 w-4" /> Export Report</Button>
+          <Button variant="glass" className="gap-2" onClick={() => {
+            const history = localStorage.getItem("finoptic_history") || "[]";
+            const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), insights: JSON.parse(history) }, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `finoptic-insights-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}><Download className="h-4 w-4" /> Export Report</Button>
         </motion.div>
 
         {/* Search & Filters */}
