@@ -22,44 +22,52 @@ export interface AnalysisResult {
   timestamp: Date;
 }
 
+const HISTORY_KEY = "finoptic_history";
+const MAX_HISTORY = 50;
+
+function loadHistory(): AnalysisResult[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as AnalysisResult[];
+    return parsed.map((r) => ({ ...r, timestamp: new Date(r.timestamp) }));
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(results: AnalysisResult[]) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(results.slice(0, MAX_HISTORY)));
+    window.dispatchEvent(new Event("finoptic:history-updated"));
+  } catch {}
+}
+
 export function useChartAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [results, setResults] = useState<AnalysisResult[]>([]);
+  const [results, setResults] = useState<AnalysisResult[]>(loadHistory());
   const [error, setError] = useState<string | null>(null);
 
   const analyzeImage = async (file: File): Promise<AnalysisResult | null> => {
-    try {
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-      const { data, error: fnError } = await supabase.functions.invoke("analyze-chart", {
-        body: { imageBase64: base64, fileName: file.name },
-      });
+    const { data, error: fnError } = await supabase.functions.invoke("analyze-chart", {
+      body: { imageBase64: base64, fileName: file.name },
+    });
 
-      if (fnError) {
-        throw new Error(fnError.message);
-      }
+    if (fnError) throw new Error(fnError.message);
+    if (data.error) throw new Error(data.error);
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      const result: AnalysisResult = {
-        fileName: file.name,
-        analysis: data.analysis,
-        timestamp: new Date(),
-      };
-
-      return result;
-    } catch (err) {
-      console.error("Analysis error for", file.name, err);
-      throw err;
-    }
+    return {
+      fileName: file.name,
+      analysis: data.analysis,
+      timestamp: new Date(),
+    };
   };
 
   const analyzeFiles = async (files: File[]) => {
@@ -68,37 +76,27 @@ export function useChartAnalysis() {
     const newResults: AnalysisResult[] = [];
 
     for (const file of files) {
-      // Only process image files
-      if (!file.type.startsWith("image/")) {
-        console.warn("Skipping non-image file:", file.name);
-        continue;
-      }
-
+      if (!file.type.startsWith("image/")) continue;
       try {
         const result = await analyzeImage(file);
-        if (result) {
-          newResults.push(result);
-        }
+        if (result) newResults.push(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Analysis failed");
       }
     }
 
-    setResults((prev) => [...newResults, ...prev]);
+    const merged = [...newResults, ...results];
+    setResults(merged);
+    saveHistory(merged);
     setIsAnalyzing(false);
     return newResults;
   };
 
   const clearResults = () => {
     setResults([]);
+    saveHistory([]);
     setError(null);
   };
 
-  return {
-    isAnalyzing,
-    results,
-    error,
-    analyzeFiles,
-    clearResults,
-  };
+  return { isAnalyzing, results, error, analyzeFiles, clearResults };
 }
